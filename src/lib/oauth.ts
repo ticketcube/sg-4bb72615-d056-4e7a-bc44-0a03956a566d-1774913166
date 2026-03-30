@@ -29,16 +29,13 @@ export function verifyClientSecret(secret: string, hash: string): boolean {
   return hashClientSecret(secret) === hash;
 }
 
-export const OAUTH_SCOPES = {
-  "openid": "OpenID Connect authentication",
-  "profile": "Access to user profile information",
-  "email": "Access to user email address",
-  "offline_access": "Refresh token for offline access",
-} as const;
+export const OAUTH_SCOPES: Record<string, string> = {
+  profile: "Access your profile information",
+  email: "Access your email address",
+};
 
-export type OAuthScope = keyof typeof OAUTH_SCOPES;
-
-export function validateScopes(scopes: string): boolean {
+export function validateScopes(scopes: string, allowedScopes: string[] = ["profile", "email"]) {
+  if (!scopes) return false;
   const requestedScopes = scopes.split(" ");
-  return requestedScopes.every(scope => scope in OAUTH_SCOPES);
+  return requestedScopes.every(scope => allowedScopes.includes(scope));
 }

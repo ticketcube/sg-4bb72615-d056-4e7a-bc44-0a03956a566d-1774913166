@@ -1,189 +1,210 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase";
-import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, CheckCircle, XCircle } from "lucide-react";
-
-type Application = {
-  id: string;
-  name: string;
-  description: string | null;
-  homepage_url: string | null;
-};
+import { Checkbox } from "@/components/ui/checkbox";
+import { Shield, AlertCircle } from "lucide-react";
+import { SEO } from "@/components/SEO";
+import { generateAuthorizationCode } from "@/lib/oauth";
 
 export default function ConsentPage() {
   const router = useRouter();
-  const { client_id, redirect_uri, scope, state, response_type } = router.query;
-  const [application, setApplication] = useState<Application | null>(null);
+  const { client_id, redirect_uri, scope, state, response_type, code_challenge, code_challenge_method } = router.query;
+  
+  const [client, setClient] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [consenting, setConsenting] = useState(false);
 
   useEffect(() => {
-    const fetchApplication = async () => {
+    async function loadData() {
       if (!client_id) return;
 
       try {
-        const { data, error } = await supabase
-          .from("oauth_applications")
-          .select("id, name, description, homepage_url")
+        // Get authenticated user
+        const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !authUser) {
+          router.push(`/auth/login?${new URLSearchParams(router.query as any).toString()}`);
+          return;
+        }
+
+        setUser(authUser);
+
+        // Get client details
+        const { data: clientData, error: clientError } = await supabase
+          .from("oauth_clients")
+          .select("*")
           .eq("client_id", client_id)
-          .eq("status", "active")
           .single();
 
-        if (error) throw error;
-        setApplication(data);
+        if (clientError || !clientData) {
+          setError("Invalid client application");
+          return;
+        }
+
+        setClient(clientData);
       } catch (err) {
-        setError("Invalid application");
+        setError("Failed to load application details");
       } finally {
         setLoading(false);
       }
-    };
+    }
 
-    fetchApplication();
-  }, [client_id]);
+    loadData();
+  }, [client_id, router]);
 
   const handleConsent = async (approved: boolean) => {
     if (!approved) {
-      // Redirect back with error
       const errorUrl = new URL(redirect_uri as string);
-      errorUrl.searchParams.append("error", "access_denied");
-      if (state) errorUrl.searchParams.append("state", state as string);
+      errorUrl.searchParams.set("error", "access_denied");
+      if (state) errorUrl.searchParams.set("state", state as string);
       window.location.href = errorUrl.toString();
       return;
     }
 
-    // Submit consent via POST to authorize endpoint
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = "/api/oauth/authorize";
+    setConsenting(true);
 
-    const fields = { client_id, redirect_uri, response_type, scope, state };
-    Object.entries(fields).forEach(([key, value]) => {
-      if (value) {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = key;
-        input.value = value as string;
-        form.appendChild(input);
+    try {
+      const authCode = generateAuthorizationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      const { error: insertError } = await supabase
+        .from("oauth_authorizations")
+        .insert({
+          authorization_code: authCode,
+          client_id: client.id,
+          user_id: user.id,
+          redirect_uri: redirect_uri as string,
+          scopes: (scope as string) || "profile email",
+          expires_at: expiresAt.toISOString(),
+          code_challenge: code_challenge as string || null,
+          code_challenge_method: code_challenge_method as string || null,
+        });
+
+      if (insertError) {
+        setError("Failed to create authorization");
+        setConsenting(false);
+        return;
       }
-    });
 
-    document.body.appendChild(form);
-    form.submit();
+      // Redirect back to client with authorization code
+      const successUrl = new URL(redirect_uri as string);
+      successUrl.searchParams.set("code", authCode);
+      if (state) successUrl.searchParams.set("state", state as string);
+      
+      window.location.href = successUrl.toString();
+    } catch (err) {
+      setError("An error occurred during authorization");
+      setConsenting(false);
+    }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="animate-pulse text-slate-600">Loading...</div>
       </div>
     );
   }
 
-  if (error || !application) {
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50 px-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Invalid Request</h2>
-            <p className="text-slate-600">{error || "Application not found"}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-5 h-5" />
+              <CardTitle>Authorization Error</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-slate-600">{error}</p>
+            <Button onClick={() => router.push("/")} className="mt-4 w-full">
+              Return Home
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const scopes = (scope as string)?.split(" ") || [];
-  const scopeDescriptions: Record<string, string> = {
-    openid: "Verify your identity",
-    profile: "Access your profile information (name, picture)",
-    email: "Access your email address",
-    offline_access: "Maintain access when you're not actively using the app",
-  };
+  const scopes = ((scope as string) || "profile email").split(" ");
 
   return (
     <>
-      <SEO 
-        title="Authorize Application"
-        description="Review and authorize application access"
-      />
-      
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50 px-4 py-8">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 mb-4">
-              <Shield className="w-8 h-8 text-white" />
+      <SEO title="Authorize Application" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              {client?.client_logo_url ? (
+                <img src={client.client_logo_url} alt={client.client_name} className="w-16 h-16 rounded-lg" />
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
+              )}
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">
-              Authorize Application
-            </h1>
-          </div>
+            <CardTitle className="text-2xl">{client?.client_name}</CardTitle>
+            <CardDescription className="text-base mt-2">
+              wants to access your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {client?.client_description && (
+              <p className="text-sm text-slate-600 text-center">{client.client_description}</p>
+            )}
 
-          <Card className="shadow-xl border-slate-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {application.name}
-                <span className="text-sm font-normal text-slate-500">wants to access your account</span>
-              </CardTitle>
-              {application.description && (
-                <CardDescription>{application.description}</CardDescription>
-              )}
-              {application.homepage_url && (
-                <a 
-                  href={application.homepage_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-indigo-600 hover:text-indigo-700"
-                >
-                  Visit website →
-                </a>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-3">
-                  This application will be able to:
-                </h3>
-                <ul className="space-y-2">
-                  {scopes.map((s) => (
-                    <li key={s} className="flex items-start gap-2">
-                      <CheckCircle className="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-slate-700">{scopeDescriptions[s] || s}</span>
-                    </li>
-                  ))}
-                </ul>
+            <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-medium text-slate-700">This application will be able to:</p>
+              <div className="space-y-2">
+                {scopes.includes("profile") && (
+                  <div className="flex items-start gap-2">
+                    <Checkbox checked disabled className="mt-0.5" />
+                    <div className="text-sm text-slate-600">
+                      <p className="font-medium">View your profile information</p>
+                      <p className="text-xs text-slate-500">Name, avatar, and public profile data</p>
+                    </div>
+                  </div>
+                )}
+                {scopes.includes("email") && (
+                  <div className="flex items-start gap-2">
+                    <Checkbox checked disabled className="mt-0.5" />
+                    <div className="text-sm text-slate-600">
+                      <p className="font-medium">View your email address</p>
+                      <p className="text-xs text-slate-500">Primary email and verification status</p>
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
 
-              <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
-                <p className="text-sm text-amber-900">
-                  <strong>Note:</strong> Make sure you trust this application before granting access.
-                </p>
-              </div>
+            <div className="text-xs text-slate-500 text-center">
+              Signed in as <span className="font-medium">{user?.email}</span>
+            </div>
 
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => handleConsent(false)}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => handleConsent(true)}
-                  className="flex-1"
-                >
-                  Authorize
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => handleConsent(false)}
+                disabled={consenting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleConsent(true)}
+                disabled={consenting}
+                className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              >
+                {consenting ? "Authorizing..." : "Authorize"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

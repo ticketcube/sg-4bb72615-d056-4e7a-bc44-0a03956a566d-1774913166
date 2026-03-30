@@ -5,83 +5,81 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Server-side admin client for OAuth operations
+export function getServiceClient() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY not configured");
+  }
+  return createClient(supabaseUrl, serviceKey);
+}
+
+// Type definitions matching existing schema
 export type Database = {
   public: {
     Tables: {
-      oauth_applications: {
+      oauth_clients: {
         Row: {
           id: string;
-          name: string;
-          description: string | null;
           client_id: string;
           client_secret: string;
+          client_name: string;
+          client_description: string | null;
+          client_logo_url: string | null;
           redirect_uris: string[];
-          homepage_url: string | null;
-          status: "active" | "inactive";
-          user_id: string;
+          allowed_scopes: string[];
           created_at: string;
           updated_at: string;
+          user_id: string;
         };
         Insert: {
           id?: string;
-          name: string;
-          description?: string | null;
           client_id: string;
           client_secret: string;
+          client_name: string;
+          client_description?: string | null;
+          client_logo_url?: string | null;
           redirect_uris: string[];
-          homepage_url?: string | null;
-          status?: "active" | "inactive";
-          user_id: string;
+          allowed_scopes: string[];
           created_at?: string;
           updated_at?: string;
+          user_id: string;
         };
         Update: {
-          id?: string;
-          name?: string;
-          description?: string | null;
-          client_id?: string;
-          client_secret?: string;
+          client_name?: string;
+          client_description?: string | null;
+          client_logo_url?: string | null;
           redirect_uris?: string[];
-          homepage_url?: string | null;
-          status?: "active" | "inactive";
-          user_id?: string;
-          created_at?: string;
+          allowed_scopes?: string[];
           updated_at?: string;
         };
       };
-      authorization_codes: {
+      oauth_authorizations: {
         Row: {
           id: string;
-          code: string;
+          authorization_code: string;
           client_id: string;
           user_id: string;
           redirect_uri: string;
-          scope: string;
+          scopes: string;
           expires_at: string;
-          used: boolean;
+          code_challenge: string | null;
+          code_challenge_method: string | null;
           created_at: string;
+          used_at: string | null;
         };
         Insert: {
           id?: string;
-          code: string;
+          authorization_code: string;
           client_id: string;
           user_id: string;
           redirect_uri: string;
-          scope: string;
+          scopes: string;
           expires_at: string;
-          used?: boolean;
+          code_challenge?: string | null;
+          code_challenge_method?: string | null;
           created_at?: string;
-        };
-        Update: {
-          id?: string;
-          code?: string;
-          client_id?: string;
-          user_id?: string;
-          redirect_uri?: string;
-          scope?: string;
-          expires_at?: string;
-          used?: boolean;
-          created_at?: string;
+          used_at?: string | null;
         };
       };
       access_tokens: {
@@ -90,27 +88,20 @@ export type Database = {
           token: string;
           client_id: string;
           user_id: string;
-          scope: string;
+          scopes: string;
           expires_at: string;
           created_at: string;
+          revoked_at: string | null;
         };
         Insert: {
           id?: string;
           token: string;
           client_id: string;
           user_id: string;
-          scope: string;
+          scopes: string;
           expires_at: string;
           created_at?: string;
-        };
-        Update: {
-          id?: string;
-          token?: string;
-          client_id?: string;
-          user_id?: string;
-          scope?: string;
-          expires_at?: string;
-          created_at?: string;
+          revoked_at?: string | null;
         };
       };
       refresh_tokens: {
@@ -122,6 +113,7 @@ export type Database = {
           user_id: string;
           expires_at: string;
           created_at: string;
+          revoked_at: string | null;
         };
         Insert: {
           id?: string;
@@ -131,15 +123,7 @@ export type Database = {
           user_id: string;
           expires_at: string;
           created_at?: string;
-        };
-        Update: {
-          id?: string;
-          token?: string;
-          access_token_id?: string;
-          client_id?: string;
-          user_id?: string;
-          expires_at?: string;
-          created_at?: string;
+          revoked_at?: string | null;
         };
       };
     };

@@ -3,17 +3,11 @@ import { supabase } from "@/lib/supabase";
 import { generateAuthorizationCode, validateScopes } from "@/lib/oauth";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "GET" && req.method !== "POST") {
+  if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const {
-    client_id,
-    redirect_uri,
-    response_type,
-    scope = "openid profile email",
-    state,
-  } = req.method === "GET" ? req.query : req.body;
+  const { client_id, redirect_uri, response_type, scope, state, code_challenge, code_challenge_method } = req.query;
 
   // Validate required parameters
   if (!client_id || !redirect_uri || !response_type) {
@@ -21,77 +15,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (response_type !== "code") {
-    return res.status(400).json({ error: "Unsupported response_type. Only 'code' is supported." });
+    return res.status(400).json({ error: "Unsupported response_type. Only 'code' is supported" });
   }
 
-  // Validate scopes
-  if (typeof scope === "string" && !validateScopes(scope)) {
-    return res.status(400).json({ error: "Invalid scope" });
-  }
-
-  // Verify client exists and is active
-  const { data: application, error: appError } = await supabase
-    .from("oauth_applications")
+  // Verify client exists and redirect_uri matches
+  const { data: client, error: clientError } = await supabase
+    .from("oauth_clients")
     .select("*")
     .eq("client_id", client_id)
-    .eq("status", "active")
     .single();
 
-  if (appError || !application) {
+  if (clientError || !client) {
     return res.status(400).json({ error: "Invalid client_id" });
   }
 
-  // Verify redirect_uri is registered
-  const redirectUriStr = Array.isArray(redirect_uri) ? redirect_uri[0] : redirect_uri;
-  if (!application.redirect_uris.includes(redirectUriStr)) {
+  // Validate redirect URI
+  const redirectUris = client.redirect_uris || [];
+  if (!redirectUris.includes(redirect_uri as string)) {
     return res.status(400).json({ error: "Invalid redirect_uri" });
   }
 
+  // Validate scopes
+  const requestedScopes = (scope as string) || "profile email";
+  if (!validateScopes(requestedScopes, client.allowed_scopes || [])) {
+    return res.status(400).json({ error: "Invalid scope requested" });
+  }
+
   // Check if user is authenticated
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session) {
-    // Redirect to login with return URL
-    const returnUrl = `/api/oauth/authorize?${new URLSearchParams(req.query as Record<string, string>).toString()}`;
-    return res.redirect(307, `/auth/login?return_to=${encodeURIComponent(returnUrl)}`);
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    // Redirect to login page with return URL
+    return res.redirect(`/auth/login?${new URLSearchParams({
+      client_id: client_id as string,
+      redirect_uri: redirect_uri as string,
+      scope: requestedScopes,
+      state: (state as string) || "",
+      response_type: response_type as string,
+      ...(code_challenge && { code_challenge: code_challenge as string }),
+      ...(code_challenge_method && { code_challenge_method: code_challenge_method as string }),
+    }).toString()}`);
   }
 
-  // If POST, user has consented - generate authorization code
-  if (req.method === "POST") {
-    const code = generateAuthorizationCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    const { error: codeError } = await supabase
-      .from("authorization_codes")
-      .insert({
-        code,
-        client_id: client_id as string,
-        user_id: session.user.id,
-        redirect_uri: redirectUriStr,
-        scope: scope as string,
-        expires_at: expiresAt.toISOString(),
-      });
-
-    if (codeError) {
-      return res.status(500).json({ error: "Failed to generate authorization code" });
-    }
-
-    // Redirect back to application with code
-    const redirectUrl = new URL(redirectUriStr);
-    redirectUrl.searchParams.append("code", code);
-    if (state) {
-      redirectUrl.searchParams.append("state", Array.isArray(state) ? state[0] : state);
-    }
-
-    return res.redirect(302, redirectUrl.toString());
-  }
-
-  // Show consent screen
-  return res.redirect(307, `/auth/consent?${new URLSearchParams({
+  // User is authenticated, redirect to consent page
+  return res.redirect(`/auth/consent?${new URLSearchParams({
     client_id: client_id as string,
-    redirect_uri: redirectUriStr,
-    scope: scope as string,
+    redirect_uri: redirect_uri as string,
+    scope: requestedScopes,
     state: (state as string) || "",
     response_type: response_type as string,
+    ...(code_challenge && { code_challenge: code_challenge as string }),
+    ...(code_challenge_method && { code_challenge_method: code_challenge_method as string }),
   }).toString()}`);
 }

@@ -1,59 +1,66 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase";
+import { getServiceClient } from "@/lib/supabase";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Extract Bearer token
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Missing or invalid authorization header" });
   }
 
-  const accessToken = authHeader.substring(7);
+  const token = authHeader.substring(7);
+  const supabase = getServiceClient();
 
   // Verify access token
-  const { data: tokenData, error: tokenError } = await supabase
+  const { data: accessToken, error: tokenError } = await supabase
     .from("access_tokens")
     .select("*")
-    .eq("token", accessToken)
+    .eq("token", token)
+    .is("revoked_at", null)
     .single();
 
-  if (tokenError || !tokenData) {
+  if (tokenError || !accessToken) {
     return res.status(401).json({ error: "Invalid access token" });
   }
 
-  if (new Date(tokenData.expires_at) < new Date()) {
+  // Check if token is expired
+  if (new Date(accessToken.expires_at) < new Date()) {
     return res.status(401).json({ error: "Access token expired" });
   }
 
-  // Get user information from Supabase Auth
-  const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(
-    tokenData.user_id
-  );
+  // Get user information
+  const { data: user, error: userError } = await supabase.auth.admin.getUserById(accessToken.user_id);
 
   if (userError || !user) {
-    return res.status(500).json({ error: "Failed to fetch user information" });
+    return res.status(404).json({ error: "User not found" });
   }
 
-  // Parse requested scopes
-  const scopes = tokenData.scope.split(" ");
-  const userInfo: Record<string, unknown> = {};
+  // Get user profile if exists
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.user.id)
+    .single();
 
-  if (scopes.includes("openid")) {
-    userInfo.sub = user.id;
-  }
+  // Build response based on requested scopes
+  const scopes = accessToken.scopes.split(" ");
+  const userInfo: any = {
+    sub: user.user.id,
+  };
 
   if (scopes.includes("profile")) {
-    userInfo.name = user.user_metadata?.full_name || null;
-    userInfo.picture = user.user_metadata?.avatar_url || null;
-    userInfo.updated_at = user.updated_at;
+    userInfo.name = profile?.full_name || profile?.display_name || "";
+    userInfo.picture = profile?.avatar_url || "";
+    userInfo.updated_at = profile?.updated_at || user.user.updated_at;
   }
 
   if (scopes.includes("email")) {
-    userInfo.email = user.email;
-    userInfo.email_verified = user.email_confirmed_at !== null;
+    userInfo.email = user.user.email || "";
+    userInfo.email_verified = user.user.email_confirmed_at !== null;
   }
 
   return res.status(200).json(userInfo);

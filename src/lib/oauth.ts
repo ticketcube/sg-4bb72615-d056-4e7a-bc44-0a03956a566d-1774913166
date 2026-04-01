@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 
+export function generateRandomString(length: number = 32): string {
+  return crypto.randomBytes(length).toString("base64url").substring(0, length);
+}
+
 export function generateClientId(): string {
   return `client_${uuidv4().replace(/-/g, "")}`;
 }

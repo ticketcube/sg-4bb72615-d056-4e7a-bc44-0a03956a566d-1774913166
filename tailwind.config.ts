@@ -45,13 +45,13 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       fontFamily: {
-        sans: ["Work Sans", "system-ui", "sans-serif"],
-        heading: ["Sora", "system-ui", "sans-serif"],
+        body: ["Inter", "system-ui", "sans-serif"],
+        heading: ["Space Grotesk", "Inter", "system-ui", "sans-serif"],
         mono: ["ui-monospace", "monospace"],
       },
       backgroundImage: {
+        "gradient-brand": "var(--gradient-brand)",
         "gradient-hero": "var(--gradient-hero)",
-        "gradient-card": "var(--gradient-card)",
       },
       borderRadius: {
         lg: "var(--radius)",

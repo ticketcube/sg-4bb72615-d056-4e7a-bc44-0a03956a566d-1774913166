@@ -1,4 +1,4 @@
-import Head from 'next/head';
+import Head from "next/head";
 
 interface SEOProps {
   title?: string;
@@ -9,16 +9,16 @@ interface SEOProps {
 
 // SEO elements that can be used in _document.tsx (returns JSX without Head wrapper)
 export function SEOElements({
-  title = "Hello World",
-  description = "Welcome to my app",
-  image = "/og-image.png",
+  title = "FanDragon - Secure Identity Provider for Fan Communities",
+  description = "FanDragon provides secure OAuth authentication for fan community applications. Power your apps with trusted identity management.",
+  image = "/FDBanner.png",
   url,
 }: SEOProps) {
   return (
     <>
       <title>{title}</title>
       <meta name="description" content={description} />
-      <link rel="icon" href="/favicon.ico" />
+      <link rel="icon" href="/dragon-icon.svg" type="image/svg+xml" />
 
       {/* Open Graph */}
       <meta property="og:title" content={title} />
@@ -37,18 +37,17 @@ export function SEOElements({
 }
 
 // SEO component for use in pages/_app.tsx or individual pages (uses next/head)
-// Note: Flattened structure (no fragment) for better Next.js Head compatibility during hot reload
 export function SEO({
-  title = "Hello World",
-  description = "Welcome to my app",
-  image = "/og-image.png",
+  title = "FanDragon - Secure Identity Provider for Fan Communities",
+  description = "FanDragon provides secure OAuth authentication for fan community applications. Power your apps with trusted identity management.",
+  image = "/FDBanner.png",
   url,
 }: SEOProps) {
   return (
     <Head>
       <title>{title}</title>
       <meta name="description" content={description} />
-      <link rel="icon" href="/favicon.ico" />
+      <link rel="icon" href="/dragon-icon.svg" type="image/svg+xml" />
 
       {/* Open Graph */}
       <meta property="og:title" content={title} />

@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   };
 
   if (scopes.includes("profile")) {
-    userInfo.name = profile?.full_name || profile?.display_name || "";
+    userInfo.name = profile?.full_name || "";
     userInfo.picture = profile?.avatar_url || "";
     userInfo.updated_at = profile?.updated_at || user.user.updated_at;
   }

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin, supabase } from "@/lib/supabase";
 import crypto from "crypto";
 import { generateAuthorizationCode, validateScopes } from "@/lib/oauth";
 
@@ -40,17 +40,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Store authorization code in database
     const { error: insertError } = await supabaseAdmin
-      .from("oauth_authorization_codes")
+      .from("oauth_authorizations")
       .insert({
-        code: authorizationCode,
+        authorization_code: authorizationCode,
         client_id: clientIdStr,
         redirect_uri: redirectUriStr,
-        scope: scope,
-        state: state,
-        code_challenge: code_challenge,
-        code_challenge_method: code_challenge_method,
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
-      });
+        scopes: Array.isArray(scope) ? scope : typeof scope === 'string' ? scope.split(' ') : [],
+        state: Array.isArray(state) ? state[0] : state,
+        code_challenge: Array.isArray(code_challenge) ? code_challenge[0] : code_challenge,
+        code_challenge_method: Array.isArray(code_challenge_method) ? code_challenge_method[0] : code_challenge_method,
+        code_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
+      } as any);
 
     if (insertError) {
       console.error("Authorization error:", insertError);
@@ -106,7 +106,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const requestedScopes = getStr(scope).split(" ");
 
   // Validate scopes
-  if (!validateScopes(requestedScopes, client.allowed_scopes || [])) {
+  const allowedScopesStr = Array.isArray(client.allowed_scopes) ? client.allowed_scopes.join(" ") : String(client.allowed_scopes || "");
+  if (!validateScopes(requestedScopes, allowedScopesStr)) {
     return res.status(400).json({ error: "Invalid scope requested" });
   }
 

@@ -39,8 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from("oauth_authorizations")
         .select("*")
         .eq("authorization_code", code)
-        .eq("client_id", client.id)
-        .is("used_at", null)
+        .eq("client_id", client.client_id)
+        .eq("code_used", false)
         .single();
 
       if (authError || !authorization) {
@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Check if code is expired
-      if (new Date(authorization.expires_at) < new Date()) {
+      if (authorization.code_expires_at && new Date(authorization.code_expires_at) < new Date()) {
         return res.status(400).json({ error: "Authorization code expired" });
       }
 
@@ -78,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Mark authorization code as used
       await supabase
         .from("oauth_authorizations")
-        .update({ used_at: new Date().toISOString() })
+        .update({ code_used: true })
         .eq("id", authorization.id);
 
       // Generate access token
@@ -90,8 +90,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .insert({
           token: accessToken,
           client_id: client.id,
-          user_id: authorization.user_id,
-          scopes: authorization.scopes,
+          user_id: authorization.user_id as string,
+          scopes: Array.isArray(authorization.scopes) ? authorization.scopes.join(" ") : (authorization.scopes as string),
           expires_at: accessTokenExpiry.toISOString(),
         })
         .select()

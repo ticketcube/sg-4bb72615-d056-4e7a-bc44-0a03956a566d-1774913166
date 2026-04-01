@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,39 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [oauthParams, setOauthParams] = useState<{
+    client_id?: string;
+    redirect_uri?: string;
+    scope?: string;
+    state?: string;
+    response_type?: string;
+    code_challenge?: string;
+    code_challenge_method?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    // Capture OAuth parameters from URL
+    const { client_id, redirect_uri, scope, state, response_type, code_challenge, code_challenge_method } = router.query;
+    
+    if (client_id && redirect_uri) {
+      setOauthParams({
+        client_id: client_id as string,
+        redirect_uri: redirect_uri as string,
+        scope: scope as string,
+        state: state as string,
+        response_type: response_type as string,
+        code_challenge: code_challenge as string,
+        code_challenge_method: code_challenge_method as string,
+      });
+    }
+  }, [router.query]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -31,7 +57,22 @@ export default function Login() {
       setError(signInError.message);
       setLoading(false);
     } else {
-      router.push("/");
+      // If OAuth parameters exist, redirect to consent page
+      if (oauthParams && oauthParams.client_id && oauthParams.redirect_uri) {
+        const params = new URLSearchParams({
+          client_id: oauthParams.client_id,
+          redirect_uri: oauthParams.redirect_uri,
+          scope: oauthParams.scope || "openid email profile",
+          state: oauthParams.state || "",
+          response_type: oauthParams.response_type || "code",
+          ...(oauthParams.code_challenge && { code_challenge: oauthParams.code_challenge }),
+          ...(oauthParams.code_challenge_method && { code_challenge_method: oauthParams.code_challenge_method }),
+        });
+        router.push(`/auth/consent?${params.toString()}`);
+      } else {
+        // Normal login, go to dashboard
+        router.push("/");
+      }
     }
   };
 
@@ -104,6 +145,16 @@ export default function Login() {
             </form>
           </CardContent>
         </Card>
+
+        <div className="text-center text-sm">
+          <span className="text-muted-foreground">Don't have an account? </span>
+          <Link 
+            href={`/auth/register${oauthParams ? `?${new URLSearchParams(oauthParams as any).toString()}` : ""}`}
+            className="text-primary hover:underline font-medium"
+          >
+            Sign up
+          </Link>
+        </div>
 
         <div className="text-center text-sm text-muted-foreground space-y-2">
           <p>FanDragon Identity Provider</p>

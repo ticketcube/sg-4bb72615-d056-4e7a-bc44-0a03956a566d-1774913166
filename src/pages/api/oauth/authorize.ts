@@ -103,11 +103,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Check requested scopes against allowed scopes
-  const requestedScopes = getStr(scope).split(" ");
+  const scopeStr = getStr(scope);
 
   // Validate scopes
-  const allowedScopesStr = Array.isArray(client.allowed_scopes) ? client.allowed_scopes.join(" ") : String(client.allowed_scopes || "");
-  if (!validateScopes(requestedScopes, allowedScopesStr)) {
+  const allowedScopesArr = Array.isArray(client.allowed_scopes) 
+    ? client.allowed_scopes 
+    : typeof client.allowed_scopes === 'string' 
+      ? (client.allowed_scopes as string).split(" ") 
+      : [];
+      
+  if (!validateScopes(scopeStr, allowedScopesArr)) {
     return res.status(400).json({ error: "Invalid scope requested" });
   }
 
@@ -119,7 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.redirect(`/auth/login?${new URLSearchParams({
       client_id: client_id as string,
       redirect_uri: redirect_uri as string,
-      scope: requestedScopes.join(" "),
+      scope: scopeStr,
       state: (state as string) || "",
       response_type: response_type as string,
       ...(code_challenge && { code_challenge: code_challenge as string }),
@@ -131,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   return res.redirect(`/auth/consent?${new URLSearchParams({
     client_id: client_id as string,
     redirect_uri: redirect_uri as string,
-    scope: requestedScopes.join(" "),
+    scope: scopeStr,
     state: (state as string) || "",
     response_type: response_type as string,
     ...(code_challenge && { code_challenge: code_challenge as string }),

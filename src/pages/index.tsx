@@ -54,7 +54,18 @@ export default function Dashboard() {
 
   const fetchApplications = async () => {
     try {
-      const response = await fetch("/api/applications");
+      // Get current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Not authenticated. Please log in again.");
+      }
+
+      const response = await fetch("/api/applications", {
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
+      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServiceClient } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -12,28 +12,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: "Missing or invalid authorization header" });
   }
 
-  const token = authHeader.substring(7);
-  const supabase = getServiceClient();
+  const accessToken = authHeader.replace("Bearer ", "");
+  const supabase = supabaseAdmin;
 
   // Verify access token
-  const { data: accessToken, error: tokenError } = await supabase
+  const { data: accessTokenData, error: tokenError } = await supabase
     .from("access_tokens")
     .select("*")
-    .eq("token", token)
+    .eq("token", accessToken)
     .is("revoked_at", null)
     .single();
 
-  if (tokenError || !accessToken) {
+  if (tokenError || !accessTokenData) {
     return res.status(401).json({ error: "Invalid access token" });
   }
 
   // Check if token is expired
-  if (new Date(accessToken.expires_at) < new Date()) {
+  if (new Date(accessTokenData.expires_at) < new Date()) {
     return res.status(401).json({ error: "Access token expired" });
   }
 
   // Get user information
-  const { data: user, error: userError } = await supabase.auth.admin.getUserById(accessToken.user_id);
+  const { data: user, error: userError } = await supabase.auth.admin.getUserById(accessTokenData.user_id);
 
   if (userError || !user) {
     return res.status(404).json({ error: "User not found" });
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .single();
 
   // Build response based on requested scopes
-  const scopes = accessToken.scopes.split(" ");
+  const scopes = accessTokenData.scopes.split(" ");
   const userInfo: any = {
     sub: user.user.id,
   };

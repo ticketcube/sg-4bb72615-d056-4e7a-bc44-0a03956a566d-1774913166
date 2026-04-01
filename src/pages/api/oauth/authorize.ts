@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin, supabase } from "@/lib/supabase";
-import crypto from "crypto";
-import { generateAuthorizationCode, validateScopes } from "@/lib/oauth";
+import { generateRandomString, validateScopes } from "@/lib/oauth";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "POST") {
@@ -36,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Generate authorization code
-    const authorizationCode = generateAuthorizationCode();
+    const authorizationCode = generateRandomString(32);
 
     // Store authorization code in database
     const { error: insertError } = await supabaseAdmin

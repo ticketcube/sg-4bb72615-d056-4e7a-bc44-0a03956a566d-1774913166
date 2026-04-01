@@ -125,7 +125,11 @@ export default function Dashboard() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {applications.map((app) => (
-                <ApplicationCard key={app.id} application={app} />
+                <ApplicationCard 
+                  key={app.id} 
+                  application={app}
+                  onUpdate={fetchApplications}
+                />
               ))}
             </div>
           )}

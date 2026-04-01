@@ -56,7 +56,8 @@ export default function Dashboard() {
     try {
       const response = await fetch("/api/applications");
       if (!response.ok) {
-        throw new Error("Failed to fetch applications");
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
       setApplications(data || []);

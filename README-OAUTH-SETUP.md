@@ -1,5 +1,9 @@
 # OAuth Identity Provider Setup Guide
 
+> **📘 For Third-Party Developers:** If you want to integrate FanDragon authentication into your app, see [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md) instead. This file is for FanDragon administrators setting up the identity provider.
+
+---
+
 This application is configured as a complete OAuth 2.0 identity provider using Supabase Auth.
 
 ## Quick Setup Steps

@@ -1,25 +1,30 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase";
-import { generateClientId, generateClientSecret } from "@/lib/oauth";
+import { createAuthenticatedClient } from "@/lib/supabase";
+import crypto from "crypto";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   try {
-    // Get authenticated user from session
+    // Get auth token from header
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: "Missing authorization header" });
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid authorization header" });
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const accessToken = authHeader.replace("Bearer ", "");
+    const supabase = createAuthenticatedClient(accessToken);
 
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return res.status(401).json({ error: "Invalid or expired token" });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     if (req.method === "GET") {
-      // List user's OAuth applications
-      const { data: applications, error } = await supabase
+      // Fetch user's OAuth applications
+      const { data, error } = await supabase
         .from("oauth_clients")
         .select("*")
         .eq("user_id", user.id)
@@ -27,45 +32,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (error) {
         console.error("Database error:", error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: "Failed to fetch applications" });
       }
 
-      return res.status(200).json(applications || []);
+      return res.status(200).json(data || []);
     }
 
     if (req.method === "POST") {
-      const { client_name, client_description, redirect_uris, allowed_scopes, client_logo_url } = req.body;
+      const { client_name, redirect_uris, client_description, client_logo_url } = req.body;
 
-      if (!client_name || !redirect_uris) {
-        return res.status(400).json({ error: "Missing required fields: client_name and redirect_uris" });
+      // Validate required fields
+      if (!client_name || !redirect_uris || !Array.isArray(redirect_uris) || redirect_uris.length === 0) {
+        return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const clientId = generateClientId();
-      const clientSecret = generateClientSecret();
+      // Generate client credentials
+      const client_id = `fd_${crypto.randomBytes(16).toString("hex")}`;
+      const client_secret = crypto.randomBytes(32).toString("hex");
 
-      const { data: newApp, error } = await supabase
+      // Insert new OAuth client
+      const { data, error } = await supabase
         .from("oauth_clients")
         .insert({
-          client_id: clientId,
-          client_secret: clientSecret,
+          client_id,
+          client_secret,
           client_name,
           client_description: client_description || null,
           client_logo_url: client_logo_url || null,
-          redirect_uris: Array.isArray(redirect_uris) ? redirect_uris : [redirect_uris],
-          allowed_scopes: allowed_scopes || ["openid", "profile", "email"],
+          redirect_uris,
+          allowed_scopes: ["openid", "email", "profile"],
+          is_active: true,
           user_id: user.id,
         })
         .select()
         .single();
 
       if (error) {
-        console.error("Database error:", error);
-        return res.status(500).json({ error: error.message });
+        console.error("Insert error:", error);
+        return res.status(500).json({ 
+          error: "Failed to create application",
+          details: error.message 
+        });
       }
 
       return res.status(201).json({
-        ...newApp,
-        message: "Application created successfully. Save the client_secret - you won't be able to see it again!",
+        ...data,
+        client_secret, // Return secret only on creation
       });
     }
 

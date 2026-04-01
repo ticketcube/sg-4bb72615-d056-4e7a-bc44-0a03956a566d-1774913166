@@ -6,17 +6,13 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <SEOElements />
-        {/*
-          CRITICAL: DO NOT REMOVE THIS SCRIPT
-          The Softgen AI monitoring script is essential for core app functionality.
-          The application will not function without it.
-        */}
-        <script
-          src="https://cdn.softgen.ai/script.js"
-          async
-          data-softgen-monitoring="true"
+        <SEOElements 
+          title="FanDragon - Secure Identity Provider for Fan Communities"
+          description="Power your fan community apps with trusted OAuth authentication"
+          image="/FDBanner.png"
         />
+        <link rel="icon" type="image/jpeg" href="/FDFinal.jpg" />
+        <link rel="apple-touch-icon" href="/FDFinal.jpg" />
       </Head>
       <body
         className={cn(

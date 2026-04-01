@@ -73,17 +73,24 @@ export default function ConsentPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
       <SEO title="Authorization Request - FanDragon" />
       
-      <div className="w-full max-w-lg space-y-6">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-xl mb-6 p-3 dragon-shadow">
-            <Image src="/dragon-icon.svg" alt="FanDragon" width={64} height={64} className="w-full h-full" />
+      <div className="w-full max-w-md mx-auto">
+        <div className="text-center mb-8">
+          <div className="inline-block rounded-2xl overflow-hidden shadow-2xl mb-4 dragon-shadow">
+            <Image 
+              src="/FDBanner.png" 
+              alt="FanDragon" 
+              width={600} 
+              height={200} 
+              className="w-full h-auto"
+              priority
+            />
           </div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight mb-2">Authorization Request</h1>
-          <p className="text-muted-foreground text-lg">
-            <span className="font-semibold text-foreground">{clientName}</span> wants to access your FanDragon account
+          <h1 className="text-2xl font-heading font-bold mb-2">Authorization Request</h1>
+          <p className="text-muted-foreground">
+            An application wants to access your FanDragon account
           </p>
         </div>
 

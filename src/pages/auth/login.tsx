@@ -41,12 +41,16 @@ export default function Login() {
       
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-xl mb-6 p-3 dragon-shadow">
-            <Image src="/dragon-icon.svg" alt="FanDragon" width={64} height={64} className="w-full h-full" />
+          <div className="inline-block rounded-2xl overflow-hidden shadow-2xl mb-6 dragon-shadow">
+            <Image 
+              src="/FDBanner.png" 
+              alt="FanDragon" 
+              width={600} 
+              height={200} 
+              className="w-full h-auto"
+              priority
+            />
           </div>
-          <h1 className="text-4xl font-heading font-bold tracking-tight mb-2 bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-pink-500 to-blue-500">
-            Welcome to FanDragon
-          </h1>
           <p className="text-muted-foreground text-lg">Sign in to manage your identity</p>
         </div>
 

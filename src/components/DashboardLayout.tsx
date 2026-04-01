@@ -12,8 +12,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2 group">
-                <div className="relative w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/10 p-1 group-hover:scale-105 transition-transform">
-                  <Image src="/dragon-icon.svg" alt="FanDragon" width={24} height={24} className="w-full h-full" />
+                <div className="relative w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center bg-white p-1.5 group-hover:scale-105 transition-transform shadow-md">
+                  <Image 
+                    src="/FDFinal.jpg" 
+                    alt="FanDragon" 
+                    width={40} 
+                    height={40} 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <span className="font-heading font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-pink-500 to-blue-500">
                   FanDragon

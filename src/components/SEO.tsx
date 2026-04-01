@@ -39,10 +39,13 @@ export function SEOElements({
 // SEO component for use in pages/_app.tsx or individual pages (uses next/head)
 export function SEO({
   title = "FanDragon - Secure Identity Provider for Fan Communities",
-  description = "FanDragon provides secure OAuth authentication for fan community applications. Power your apps with trusted identity management.",
+  description = "Power your fan community apps with trusted OAuth authentication. Secure, scalable, and built for fans.",
   image = "/FDBanner.png",
   url,
 }: SEOProps) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fandragon.com";
+  const fullUrl = url ? `${siteUrl}${url}` : siteUrl;
+  const imageUrl = image.startsWith("http") ? image : `${siteUrl}${image}`;
   return (
     <Head>
       <title>{title}</title>

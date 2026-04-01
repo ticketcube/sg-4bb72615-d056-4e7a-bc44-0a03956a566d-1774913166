@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -39,9 +40,18 @@ export function CreateApplicationDialog({ open, onOpenChange, onSuccess }: Creat
     setError(null);
 
     try {
+      // Get current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Not authenticated");
+      }
+
       const response = await fetch("/api/applications", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           ...formData,
           redirect_uris: formData.redirect_uris.split(",").map((uri) => uri.trim()),
@@ -49,7 +59,8 @@ export function CreateApplicationDialog({ open, onOpenChange, onSuccess }: Creat
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create application");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create application");
       }
 
       const data = await response.json();

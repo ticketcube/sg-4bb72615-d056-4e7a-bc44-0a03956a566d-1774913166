@@ -9,7 +9,7 @@ export default function Home() {
       />
       <div className="fixed inset-0 w-full h-full">
         <iframe 
-          src="https://maestro.tv/working-bear"
+          src="https://maestro.tv/working-bear?embed=theater"
           className="w-full h-full border-0"
           title="Working Bear on Maestro TV"
           allowFullScreen

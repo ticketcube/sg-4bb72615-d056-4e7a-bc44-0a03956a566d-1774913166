@@ -9,7 +9,7 @@ export default function Document() {
         <SEOElements 
           title="FanDragon - Secure Identity Provider for Fan Communities"
           description="Power your fan community apps with trusted OAuth authentication"
-          image="/FDBanner.png"
+          image="/Arts.png"
         />
         <link rel="icon" type="image/jpeg" href="/FDFinal.jpg" />
         <link rel="apple-touch-icon" href="/FDFinal.jpg" />

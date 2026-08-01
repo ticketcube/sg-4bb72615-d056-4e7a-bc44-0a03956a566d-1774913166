@@ -7,12 +7,12 @@ export default function Document() {
     <Html lang="en">
       <Head>
         <SEOElements 
-          title="FanDragon - Secure Identity Provider for Fan Communities"
-          description="Power your fan community apps with trusted OAuth authentication"
+          title="StubHub Arts"
+          description=""
           image="/Arts.png"
         />
-        <link rel="icon" type="image/jpeg" href="/Arts.jpg" />
-        <link rel="apple-touch-icon" href="/FDFinal.png" />
+        <link rel="icon" type="image/png" href="/Arts.png" />
+        <link rel="apple-touch-icon" href="/Arts.png" />
       </Head>
       <body
         className={cn(

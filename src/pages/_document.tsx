@@ -11,8 +11,8 @@ export default function Document() {
           description="Power your fan community apps with trusted OAuth authentication"
           image="/Arts.png"
         />
-        <link rel="icon" type="image/jpeg" href="/FDFinal.jpg" />
-        <link rel="apple-touch-icon" href="/FDFinal.jpg" />
+        <link rel="icon" type="image/jpeg" href="/Arts.jpg" />
+        <link rel="apple-touch-icon" href="/FDFinal.png" />
       </Head>
       <body
         className={cn(

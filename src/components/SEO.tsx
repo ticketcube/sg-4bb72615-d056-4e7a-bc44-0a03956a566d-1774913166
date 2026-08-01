@@ -18,7 +18,7 @@ export function SEOElements({
     <>
       <title>{title}</title>
       <meta name="description" content={description} />
-      <link rel="icon" href="/dragon-icon.svg" type="image/svg+xml" />
+      <link rel="icon" href="/Arts.png" type="image/pn+xml" />
 
       {/* Open Graph */}
       <meta property="og:title" content={title} />

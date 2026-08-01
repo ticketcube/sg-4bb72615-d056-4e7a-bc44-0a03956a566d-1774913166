@@ -9,9 +9,9 @@ interface SEOProps {
 
 // SEO elements that can be used in _document.tsx (returns JSX without Head wrapper)
 export function SEOElements({
-  title = "FanDragon - Secure Identity Provider for Fan Communities",
-  description = "FanDragon provides secure OAuth authentication for fan community applications. Power your apps with trusted identity management.",
-  image = "/FDBanner.png",
+  title = "StubHubArts",
+  description = "",
+  image = "/Arts.png",
   url,
 }: SEOProps) {
   return (
@@ -38,9 +38,9 @@ export function SEOElements({
 
 // SEO component for use in pages/_app.tsx or individual pages (uses next/head)
 export function SEO({
-  title = "FanDragon - Secure Identity Provider for Fan Communities",
-  description = "Power your fan community apps with trusted OAuth authentication. Secure, scalable, and built for fans.",
-  image = "/FDBanner.png",
+  title = "StubHub Arts",
+  description = "",
+  image = "Arts.png",
   url,
 }: SEOProps) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fandragon.com";
